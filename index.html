@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#070b14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>GeoPulse Pro - Enterprise Edition v5.0</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #070b14;
+      --bg2: #0b1220;
+      --card: rgba(15, 23, 42, 0.85);
+      --card2: rgba(30, 41, 59, 0.7);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent2: #22c55e;
+      --danger: #f43f5e;
+      --warning: #f59e0b;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      --blur: 16px;
+      --radius: 20px;
+    }
+
+    .light-theme {
+      --bg: #eef2ff;
+      --bg2: #f8fafc;
+      --card: rgba(255, 255, 255, 0.85);
+      --card2: rgba(255, 255, 255, 0.6);
+      --border: rgba(15, 23, 42, 0.1);
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #0284c7;
+      --accent-hover: #0369a1;
+      --accent2: #059669;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, var(--bg), var(--bg2));
+      color: var(--text);
+      transition: background 0.3s ease, color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1;
+      background: radial-gradient(800px 600px at 20% 0%, rgba(56,189,248,.1), transparent 50%),
+                  radial-gradient(800px 600px at 100% 20%, rgba(34,197,94,.05), transparent 45%);
+    }
+
+    header {
+      position: relative; z-index: 30;
+      margin: 12px; padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand { display: flex; flex-direction: column; gap: 2px; }
+    .brand h1 { margin: 0; font-size: 1.2rem; letter-spacing: -0.5px; line-height: 1; font-weight: 800; }
+    .brand h1 span { color: var(--accent); }
+    .brand small { color: var(--muted); font-weight: 600; font-size: 0.75rem; }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.05); color: var(--text);
+      font-size: 0.75rem; font-weight: 700; white-space: nowrap;
+    }
+    .chip.live { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background: rgba(52, 211, 153, 0.1); }
+    .chip.warn { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.1); }
+    .chip.bad { color: #fb7185; border-color: rgba(251, 113, 133, 0.3); background: rgba(251, 113, 133, 0.1); }
+
+    .icon-btn {
+      border: none; background: rgba(255, 255, 255, 0.05); color: var(--text);
+      border: 1px solid var(--border); width: 40px; height: 40px; border-radius: 12px;
+      cursor: pointer; display: grid; place-items: center; font-size: 1.1rem;
+      transition: all 0.2s ease;
+    }
+    .icon-btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+    .icon-btn:active { transform: scale(0.95); }
+
+    .stage {
+      flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px;
+      min-height: 0; overflow: hidden;
+    }
+
+    .map-wrap {
+      position: relative; flex: 1; min-height: 250px;
+      border-radius: var(--radius); overflow: hidden;
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+      background: rgba(0, 0, 0, 0.1); z-index: 10;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Fullscreen map styles */
+    .map-wrap.is-fullscreen {
+      position: fixed; inset: 0; z-index: 9999;
+      border-radius: 0; height: 100vh; width: 100vw;
+    }
+
+    /* Absolute inset forces Leaflet to correctly calculate dimensions */
+    #map { position: absolute; inset: 0; z-index: 1; }
+
+    .map-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+    .top-floater {
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+      pointer-events: none;
+    }
+
+    .search-box {
+      pointer-events: auto; display: flex; gap: 8px; align-items: center;
+      width: 100%; max-width: 400px; background: var(--card);
+      border: 1px solid var(--border); backdrop-filter: blur(var(--blur));
+      border-radius: 16px; padding: 6px 6px 6px 14px; box-shadow: var(--shadow);
+    }
+    .search-box input {
+      border: none; outline: none; background: transparent; color: var(--text);
+      width: 100%; font: inherit; font-size: 0.9rem; font-weight: 500;
+    }
+    .search-box button {
+      border: none; cursor: pointer; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+      color: white; font-weight: 700; padding: 10px 16px; font-size: 0.85rem;
+      transition: opacity 0.2s;
+    }
+    .search-box button:hover { opacity: 0.9; }
+
+    .compass-card {
+      pointer-events: auto; min-width: 110px; background: var(--card);
+      border: 1px solid var(--border); backdrop-filter: blur(var(--blur));
+      border-radius: 16px; padding: 8px 12px; box-shadow: var(--shadow);
+      display: flex; flex-direction: row; gap: 12px; align-items: center;
+    }
+    .compass-ring {
+      width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border);
+      display: grid; place-items: center; position: relative;
+      background: radial-gradient(circle at 50% 30%, rgba(255,255,255,.1), rgba(255,255,255,.02));
+    }
+    .needle {
+      width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent;
+      border-bottom: 20px solid var(--danger); transform-origin: center bottom;
+      filter: drop-shadow(0 0 6px rgba(244,63,94,.4)); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .compass-text { display: flex; flex-direction: column; font-size: 0.75rem; color: var(--muted); font-weight: 700; line-height: 1.3; }
+    .compass-text strong { color: var(--text); font-size: 0.85rem; }
+
+    .limit-banner {
+      position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+      z-index: 20; display: none; align-items: center; justify-content: center;
+      padding: 10px 20px; border-radius: 999px; background: rgba(244, 63, 94, 0.95);
+      color: white; font-weight: 800; font-size: 0.85rem; text-align: center;
+      box-shadow: 0 8px 25px rgba(244, 63, 94, 0.4); animation: pulse 1s infinite;
+      backdrop-filter: blur(4px); pointer-events: auto; white-space: nowrap;
+    }
+    .limit-banner.show { display: flex; }
+
+    .center-fab {
+      position: absolute; right: 12px; bottom: 12px; z-index: 20;
+      pointer-events: auto; display: flex; flex-direction: column; gap: 10px;
+    }
+    .fab {
+      width: 44px; height: 44px; border: none; border-radius: 14px;
+      background: var(--card); color: var(--text); border: 1px solid var(--border);
+      backdrop-filter: blur(var(--blur)); box-shadow: var(--shadow);
+      cursor: pointer; font-size: 1.1rem; transition: all 0.2s ease;
+    }
+    .fab:hover { background: rgba(255,255,255,0.1); }
+    .fab:active { transform: scale(0.92); }
+
+    .ui-container { flex: 1; display: flex; flex-direction: column; min-height: 0; gap: 12px; }
+
+    .tab-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex-shrink: 0;
+      background: var(--card); padding: 6px; border-radius: 18px; border: 1px solid var(--border);
+    }
+    .tab-btn {
+      border: none; cursor: pointer; border-radius: 14px; padding: 12px 8px;
+      background: transparent; color: var(--muted); font: inherit; font-size: 0.85rem; font-weight: 800;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(56,189,248,.15), rgba(56,189,248,.05));
+      color: var(--text); border: 1px solid rgba(56,189,248,.3);
+      box-shadow: 0 8px 20px rgba(56,189,248,.1);
+    }
+
+    .panels { flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth; }
+    .panels::-webkit-scrollbar { width: 6px; }
+    .panels::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+    .panel { display: none; padding-bottom: 20px; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); backdrop-filter: blur(var(--blur));
+      -webkit-backdrop-filter: blur(var(--blur)); padding: 16px; margin-bottom: 12px;
+    }
+
+    .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+    .hero-big { display: flex; flex-direction: column; gap: 4px; }
+    .hero-big .kicker { color: var(--muted); text-transform: uppercase; font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; }
+    .hero-big .speed { font-size: 2.5rem; font-weight: 900; letter-spacing: -1.5px; line-height: 1; color: var(--text); }
+    .hero-big .mode { color: var(--accent2); font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 6px;}
+    .hero-big .mode::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); display: inline-block; animation: pulse 2s infinite;}
+
+    .progress-wrap { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .progress-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; font-weight: 800; }
+    .progress-bar { height: 8px; border-radius: 999px; overflow: hidden; background: rgba(148,163,184,.15); border: 1px solid var(--border); }
+    .progress-fill { height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s ease; }
+
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btn {
+      border: none; border-radius: 16px; padding: 14px 12px; font: inherit; font-size: 0.95rem; font-weight: 800;
+      cursor: pointer; color: white; transition: all 0.2s ease; display: flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); box-shadow: 0 8px 20px rgba(56,189,248,.25); }
+    .btn.primary:hover { opacity: 0.9; box-shadow: 0 12px 25px rgba(56,189,248,.35); }
+    .btn.danger { background: linear-gradient(135deg, var(--danger), #fb7185); box-shadow: 0 8px 20px rgba(244,63,94,.25); animation: pulse 2s infinite; }
+    .btn.soft { color: var(--text); background: rgba(255,255,255,.05); border: 1px solid var(--border); }
+    .btn.soft:hover { background: rgba(255,255,255,.1); }
+
+    .legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; color: var(--muted); font-size: 0.75rem; font-weight: 700; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat { padding: 14px; min-height: 90px; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 0;}
+    .stat .label { font-size: 0.7rem; color: var(--muted); font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+    .stat .value { font-size: 1.25rem; font-weight: 900; letter-spacing: -0.5px; margin-top: 6px; color: var(--text); }
+    .stat .sub { font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-top: 4px; }
+
+    .section h3 { margin: 0 0 14px; font-size: 1.05rem; font-weight: 800; color: var(--text); }
+
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .field label { font-size: 0.75rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field select {
+      width: 100%; border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(255,255,255,.05); color: var(--text); padding: 12px 14px;
+      font: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+    }
+    .field input:focus, .field select:focus { border-color: var(--accent); background: rgba(255,255,255,.08); }
+
+    .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .toggle {
+      padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(255,255,255,.03); color: var(--muted); font: inherit; font-size: 0.8rem; font-weight: 800;
+      cursor: pointer; transition: all 0.2s; flex: 1; text-align: center; min-width: 100px;
+    }
+    .toggle:hover { background: rgba(255,255,255,.08); color: var(--text); }
+    .toggle.active { background: rgba(56,189,248,.15); color: var(--text); border-color: rgba(56,189,248,.4); }
+
+    .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .mini-actions { display: flex; gap: 8px; }
+    .mini {
+      border: none; cursor: pointer; border-radius: 10px; padding: 6px 12px;
+      background: rgba(255,255,255,.05); color: var(--text); border: 1px solid var(--border);
+      font: inherit; font-size: 0.75rem; font-weight: 800; transition: background 0.2s;
+    }
+    .mini:hover { background: rgba(255,255,255,.1); }
+
+    .chart-wrap { position: relative; width: 100%; height: 160px; }
+
+    .history-list { display: flex; flex-direction: column; gap: 12px; }
+    .trip { padding: 14px; margin-bottom: 0; }
+    .trip-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .trip-title { font-size: 1rem; font-weight: 800; margin: 0; color: var(--text); }
+    .trip-meta { font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-top: 4px; }
+    .trip-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+    .trip-stats strong { color: var(--text); font-weight: 800; }
+    .trip-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 80; display: none; opacity: 0; transition: opacity 0.3s; }
+    .overlay.show { display: block; opacity: 1; }
+
+    .settings {
+      position: fixed; top: 0; right: -100%; width: min(90vw, 380px); height: 100%;
+      background: var(--bg2); border-left: 1px solid var(--border); box-shadow: -10px 0 40px rgba(0,0,0,.5);
+      z-index: 90; transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow-y: auto; padding: 20px;
+    }
+    .settings.open { right: 0; }
+    .settings-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .settings-head h2 { margin: 0; font-size: 1.2rem; font-weight: 900; }
+    
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px) scale(0.9);
+      background: rgba(15, 23, 42, 0.95); color: white; padding: 12px 20px;
+      border-radius: 999px; border: 1px solid rgba(255,255,255,.1); box-shadow: var(--shadow);
+      z-index: 120; opacity: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 0.9rem; font-weight: 700; max-width: min(90vw, 400px); text-align: center; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+    .avatar-preview {
+      width: 64px; height: 64px; border-radius: 18px; overflow: hidden;
+      border: 2px solid var(--border); background: rgba(255,255,255,.05);
+      display: grid; place-items: center; font-size: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,.2);
+    }
+    .avatar-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .footer-note { margin-top: 16px; color: var(--muted); font-size: 0.75rem; line-height: 1.5; font-weight: 600; text-align: center; }
+
+    /* Map Marker Styling */
+    .marker-wrap { width: 56px; height: 56px; position: relative; transform-origin: center center; filter: drop-shadow(0 8px 12px rgba(0,0,0,.4)); transition: transform 0.2s linear; }
+    .marker-pin {
+      width: 100%; height: 100%; border-radius: 50% 50% 50% 4px; transform: rotate(45deg);
+      background: linear-gradient(135deg, var(--accent), #60a5fa); border: 2px solid #fff;
+      position: absolute; inset: 0; box-shadow: 0 0 0 6px rgba(56,189,248,.2);
+    }
+    .marker-content {
+      position: absolute; inset: 5px; border-radius: 50%; overflow: hidden; transform: rotate(-45deg);
+      background: var(--bg2); display: grid; place-items: center; color: white; border: 2px solid #fff;
+    }
+    .marker-content img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .marker-content span { font-size: 1.5rem; line-height: 1; }
+
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    @keyframes flash { 0%, 100% { box-shadow: inset 0 0 0 0 transparent; } 50% { box-shadow: inset 0 0 0 10px rgba(244,63,94,.5); } }
+    @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (min-width: 900px) {
+      .stage {
+        flex-direction: row; gap: 16px; padding: 0 16px 16px;
+      }
+      .map-wrap {
+        flex: 1; height: 100%; min-height: 0; border-radius: 24px;
+      }
+      .ui-container {
+        width: 420px; flex: none; display: flex; flex-direction: column; gap: 12px; height: 100%;
+      }
+      .top-floater {
+        flex-direction: row; justify-content: space-between; align-items: flex-start;
+      }
+      .search-box { max-width: 350px; }
+      .compass-card { flex-direction: column; min-width: 100px; }
+      .compass-text { text-align: center; }
+      header { margin: 16px 16px 12px; border-radius: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <h1>SRLocation <span>Pro</span></h1>
+        <small id="statusText">Ready for tracking</small>
+      </div>
+
+      <div class="header-actions">
+        <div id="cloudBadge" class="chip live">📡 Live Sync OFF</div>
+        <div id="batteryBadge" class="chip">🔋 --%</div>
+        <div id="gpsBadge" class="chip warn">GPS waiting</div>
+        <button class="icon-btn" id="themeBtn" title="Toggle Theme">🌓</button>
+        <button class="icon-btn" id="settingsBtn" title="Open Settings">⚙️</button>
+      </div>
+    </header>
+
+    <div class="stage">
+      <section class="map-wrap" id="mapWrapper">
+        <div id="map"></div>
+
+        <div class="map-overlay">
+          <div class="top-floater">
+            <div class="search-box">
+              <input id="searchInput" type="text" placeholder="කොහෙද යන්න ඕනේ? (Search place...)" />
+              <button id="searchBtn">Search</button>
+            </div>
+
+            <div class="compass-card">
+              <div class="compass-ring">
+                <div id="needle" class="needle"></div>
+              </div>
+              <div class="compass-text">
+                <strong id="headingText">0°</strong>
+                <span id="speedLimitText">Limit --</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="limitBanner" class="limit-banner">⚠️ Over speeding! Slow down.</div>
+
+          <div class="center-fab">
+            <button class="fab" id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
+            <button class="fab" id="recenterBtn" title="Recenter Map">🎯</button>
+            <button class="fab" id="headingBtn" title="Toggle Heading Up">🧭</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="ui-container">
+        <div class="tab-strip">
+          <button class="tab-btn active" data-tab="driveTab">Drive</button>
+          <button class="tab-btn" data-tab="statsTab">Settings</button>
+          <button class="tab-btn" data-tab="historyTab">History</button>
+        </div>
+
+        <div class="panels" id="panelsContainer">
+          <section id="driveTab" class="panel active">
+            <div class="card hero-card">
+              <div class="hero-top">
+                <div class="hero-big">
+                  <div class="kicker">LIVE SPEED</div>
+                  <div id="speedBig" class="speed">0.0 km/h</div>
+                  <div id="modeText" class="mode">Ready</div>
+                </div>
+                <div class="avatar-preview" id="avatarPreview">🚗</div>
+              </div>
+
+              <div class="progress-wrap">
+                <div class="progress-label">
+                  <span>Daily Goal</span>
+                  <span id="goalPercent">0%</span>
+                </div>
+                <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+              </div>
+
+              <div class="controls">
+                <button id="trackBtn" class="btn primary">▶ Start</button>
+                <button id="sosBtn" class="btn danger">🚨 SOS</button>
+              </div>
+
+              <div class="legend-row">
+                <span>• Auto-detect</span>
+                <span>• Voice alerts</span>
+                <span>• Battery saver</span>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="card stat">
+                <div class="label">Distance</div>
+                <div id="distanceVal" class="value">0.00 km</div>
+                <div class="sub">Trip total</div>
+              </div>
+              <div class="card stat">
+                <div class="label">Average</div>
+                <div id="avgSpeedVal" class="value">0.0 km/h</div>
+                <div class="sub">Overall pace</div>
+              </div>
+              <div class="card stat">
+                <div class="label">Duration</div>
+                <div id="durationVal" class="value">00:00:00</div>
+                <div class="sub">Active time</div>
+              </div>
+              <div class="card stat">
+                <div class="label">Calories</div>
+                <div id="caloriesVal" class="value">0 kcal</div>
+                <div class="sub">Est. burn</div>
+              </div>
+              <div class="card stat">
+                <div class="label">Steps</div>
+                <div id="stepsVal" class="value">0</div>
+                <div class="sub">Pedometer</div>
+              </div>
+              <div class="card stat">
+                <div class="label">Altitude</div>
+                <div id="altitudeVal" class="value">-- m</div>
+                <div class="sub">Elevation</div>
+              </div>
+            </div>
+          </section>
+
+          <section id="statsTab" class="panel">
+            <div class="card section">
+              <h3>Preferences</h3>
+              <div class="field-grid">
+                <div class="field">
+                  <label>Weight (kg)</label>
+                  <input id="weightInput" type="number" min="20" max="250" step="0.1" value="65">
+                </div>
+                <div class="field">
+                  <label>Speed Limit (km/h)</label>
+                  <input id="speedLimitInput" type="number" min="1" step="1" value="50">
+                </div>
+              </div>
+
+              <div class="field-grid">
+                <div class="field">
+                  <label>Goal (km)</label>
+                  <input id="goalInput" type="number" min="0.1" step="0.1" value="5">
+                </div>
+                <div class="field">
+                  <label>Avatar</label>
+                  <select id="avatarModeSelect">
+                    <option value="car">3D Car</option>
+                    <option value="person">Profile</option>
+                    <option value="pin">Map Pin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label>Avatar Image URL / File</label>
+                <div style="display:flex; gap:8px;">
+                  <input id="avatarUrlInput" type="text" placeholder="Image URL" style="flex:1">
+                  <label class="btn soft" style="padding: 10px; cursor: pointer; border-radius: 12px; margin:0;">
+                    📁 <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+                  </label>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <button class="toggle active" id="cloudToggle">Cloud: OFF</button>
+                <button class="toggle active" id="autoDetectToggle">Auto: ON</button>
+                <button class="toggle active" id="batterySaverToggle">Saver: ON</button>
+                <button class="toggle" id="voiceToggle">Voice: ON</button>
+                <button class="toggle" id="vibrateToggle">Vibrate: ON</button>
+              </div>
+            </div>
+
+            <div class="card section chart-card">
+              <div class="chart-head">
+                <h3>Speed Graph</h3>
+                <div class="mini-actions">
+                  <button class="mini" id="exportGpxBtn">Export</button>
+                  <button class="mini" id="saveTripBtn">Save</button>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="speedChart"></canvas>
+              </div>
+            </div>
+
+            <div class="card section">
+              <h3>System</h3>
+              <div class="controls">
+                <button class="btn soft" id="clearBtn" style="color:var(--danger)">🧹 Clear All Data</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="historyTab" class="panel">
+            <div class="card section">
+              <h3>Save Journey</h3>
+              <div class="field" style="margin-bottom:0;">
+                <input id="tripNameInput" type="text" placeholder="ගමනට නමක් දෙන්න (Trip name...)">
+              </div>
+              <div class="controls" style="margin-top:12px;">
+                <button class="btn primary" id="saveCurrentBtn">💾 Save Now</button>
+                <button class="btn soft" id="refreshHistoryBtn">🔄 Refresh</button>
+              </div>
+            </div>
+
+            <div class="history-list" id="historyList"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <aside class="settings" id="settingsPanel">
+    <div class="settings-head">
+      <h2>සැකසුම් (Settings)</h2>
+      <button class="icon-btn" id="closeSettingsBtn">✕</button>
+    </div>
+
+    <div class="card section">
+      <h3>Map Layer</h3>
+      <div class="toggle-row">
+        <button class="toggle active" id="vectorBtn">Vector (Street)</button>
+        <button class="toggle" id="satBtn">Satellite View</button>
+      </div>
+    </div>
+
+    <div class="card section">
+      <h3>Emergency Setup</h3>
+      <div class="field">
+        <label>SOS Number / Email</label>
+        <input id="sosInput" type="text" placeholder="e.g. 07XXXXXXXX">
+      </div>
+    </div>
+    
+    <div class="card section">
+      <h3>Search Filter</h3>
+      <div class="field">
+        <input id="historyFilterInput" type="text" placeholder="Filter history...">
+      </div>
+    </div>
+
+    <div class="footer-note">
+      SRLocation Pro is designed to work offline. Map tiles require initial internet connection to cache. Hardware sensors (Compass/Pedometer) depend on device compatibility.
+    </div>
+  </aside>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // =========================
+    // Core State
+    // =========================
+    const state = {
+      map: null, vectorLayer: null, satelliteLayer: null,
+      marker: null, ghostMarker: null, pathLine: null, chart: null,
+      currentLocation: [7.8731, 80.7718], currentHeading: 0, headingUp: false,
+      tracking: false, watchId: null, passiveWatchId: null,
+      motionEnabled: false, batteryLevel: 1, startTime: null,
+      lastTickAt: 0, lastGeoAt: 0, lastPosition: null,
+      totalDistanceKm: 0, totalCalories: 0, steps: 0, lapStartTime: null,
+      lastLapIndex: 0, maxSpeed: 0, speedSamples: [], speedLabels: [],
+      currentTripPoints: [], trips: [],
+      theme: localStorage.getItem('gp_theme') || 'dark',
+      mapStyle: localStorage.getItem('gp_mapStyle') || 'vector',
+      cloudSync: localStorage.getItem('gp_cloud') === 'true',
+      autoDetect: localStorage.getItem('gp_autoDetect') !== 'false',
+      batterySaver: localStorage.getItem('gp_batterySaver') !== 'false',
+      voiceOn: localStorage.getItem('gp_voice') !== 'false',
+      vibrateOn: localStorage.getItem('gp_vibrate') !== 'false',
+      avatarMode: localStorage.getItem('gp_avatarMode') || 'car',
+      avatarUrl: localStorage.getItem('gp_avatarUrl') || '',
+      sos: localStorage.getItem('gp_sos') || '',
+      goalKm: parseFloat(localStorage.getItem('gp_goalKm') || '5'),
+      weightKg: parseFloat(localStorage.getItem('gp_weightKg') || '65'),
+      speedLimit: parseFloat(localStorage.getItem('gp_speedLimit') || '50'),
+      weatherLoaded: false, overSpeedActive: false
+    };
+
+    const defaultCenter = [7.8731, 80.7718];
+    const STORAGE_TRIPS_KEY = 'gp_trips_v2'; 
+
+    // =========================
+    // Utilities
+    // =========================
+    const $ = (id) => document.getElementById(id);
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    
+    // Security Utility: Escape HTML to prevent XSS vulnerability
+    const escapeHTML = str => str.replace(/[&<>'"]/g, tag => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'}[tag] || tag));
+
+    const generateId = () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+      return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    };
+
+    function formatTime(ms){
+      const total = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+      return [h, m, s].map(v => String(v).padStart(2,'0')).join(':');
+    }
+
+    function formatDateTime(ts){
+      return new Date(ts).toLocaleString([], { dateStyle:'short', timeStyle:'short' });
+    }
+
+    function haversineKm(a, b){
+      const R = 6371, dLat = (b[0] - a[0]) * Math.PI / 180, dLon = (b[1] - a[1]) * Math.PI / 180;
+      const x = Math.sin(dLat/2)**2 + Math.cos(a[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180) * Math.sin(dLon/2)**2;
+      return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    }
+
+    function speak(text){
+      if (!state.voiceOn || !('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1.1; u.lang = 'en-US'; window.speechSynthesis.speak(u);
+      } catch(e){}
+    }
+
+    function vibrate(pattern){ if (state.vibrateOn && navigator.vibrate) navigator.vibrate(pattern); }
+
+    function toast(msg, ms=2500){
+      const t = $('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+    }
+
+    function saveSettings(){
+      const keys = ['theme', 'mapStyle', 'cloudSync', 'autoDetect', 'batterySaver', 'voiceOn', 'vibrateOn', 'avatarMode', 'avatarUrl', 'sos', 'goalKm', 'weightKg', 'speedLimit'];
+      keys.forEach(k => {
+        let val = state[k];
+        if (typeof val === 'boolean') val = String(val);
+        localStorage.setItem(`gp_${k.replace('Sync','')}`, val); 
+      });
+    }
+
+    function loadTrips(){
+      try { state.trips = JSON.parse(localStorage.getItem(STORAGE_TRIPS_KEY)) || []; } 
+      catch(e) { state.trips = []; }
+    }
+    function saveTrips(){ localStorage.setItem(STORAGE_TRIPS_KEY, JSON.stringify(state.trips)); }
+
+    function applyTheme(){
+      document.body.classList.toggle('light-theme', state.theme === 'light');
+      if (state.map && state.mapStyle === 'vector' && state.vectorLayer) {
+        state.vectorLayer.setUrl(state.theme === 'light'
+          ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+      }
+    }
+
+    function markerHtml(){
+      const safeUrl = escapeHTML(state.avatarUrl); // XSS Fix applied
+      const img = state.avatarUrl ? `<img src="${safeUrl}" alt="avatar">` : (state.avatarMode === 'person' ? '<span>👤</span>' : '<span>🚗</span>');
+      return state.avatarMode === 'pin' 
+        ? `<div class="marker-wrap"><div class="marker-pin"></div><div class="marker-content"><span>📍</span></div></div>`
+        : `<div class="marker-wrap"><div class="marker-pin"></div><div class="marker-content">${img}</div></div>`;
+    }
+
+    function refreshAvatarPreview(){
+      const safeUrl = escapeHTML(state.avatarUrl); // XSS Fix applied
+      $('avatarPreview').innerHTML = state.avatarMode === 'pin' ? '📍' : (state.avatarUrl ? `<img src="${safeUrl}">` : (state.avatarMode === 'person' ? '👤' : '🚗'));
+      if (state.marker) state.marker.setIcon(L.divIcon({ className: 'gp-marker', html: markerHtml(), iconSize: [56,56], iconAnchor: [28,52] }));
+    }
+
+    function setStatus(text, kind=''){
+      $('statusText').textContent = text;
+      $('gpsBadge').textContent = text;
+      $('gpsBadge').className = `chip ${kind}`;
+    }
+
+    function updateUIBase(){
+      $('cloudBadge').textContent = state.cloudSync ? '📡 Live Sync ON' : '📡 Live Sync OFF';
+      $('batteryBadge').textContent = `🔋 ${Math.round(state.batteryLevel * 100)}%`;
+      $('speedLimitText').textContent = `Limit ${state.speedLimit || '--'} km/h`;
+      
+      const pct = clamp((state.totalDistanceKm / Math.max(0.1, state.goalKm)) * 100, 0, 100);
+      $('goalPercent').textContent = `${Math.round(pct)}%`;
+      $('progressFill').style.width = `${pct}%`;
+      
+      ['speedLimit','goal','weight','avatarMode','avatarUrl','sos'].forEach(k => {
+        const el = $(`${k}Input`) || $(`${k}Select`);
+        if(el) el.value = state[k + (k==='goal'?'Km':(k==='weight'?'Kg':''))] || state[k];
+      });
+
+      $('cloudToggle').textContent = `Cloud: ${state.cloudSync ? 'ON' : 'OFF'}`;
+      $('autoDetectToggle').textContent = `Auto: ${state.autoDetect ? 'ON' : 'OFF'}`;
+      $('batterySaverToggle').textContent = `Saver: ${state.batterySaver ? 'ON' : 'OFF'}`;
+      $('voiceToggle').textContent = `Voice: ${state.voiceOn ? 'ON' : 'OFF'}`;
+      $('vibrateToggle').textContent = `Vibrate: ${state.vibrateOn ? 'ON' : 'OFF'}`;
+      
+      $('vectorBtn').classList.toggle('active', state.mapStyle === 'vector');
+      $('satBtn').classList.toggle('active', state.mapStyle === 'satellite');
+      refreshAvatarPreview();
+    }
+
+    function setTab(tabId){
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+      document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+    }
+
+    function openSettings(open=true){
+      $('settingsPanel').classList.toggle('open', open);
+      $('overlay').classList.toggle('show', open);
+    }
+
+    // =========================
+    // Map & Chart Init
+    // =========================
+    function initMap(){
+      state.map = L.map('map', { zoomControl: false, preferCanvas: true }).setView(defaultCenter, 8);
+      
+      state.vectorLayer = L.tileLayer(
+        state.theme === 'light' ? 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        { attribution: '© OpenStreetMap, CARTO' }
+      ).addTo(state.map);
+
+      state.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+
+      state.marker = L.marker(defaultCenter, { icon: L.divIcon({ className: 'gp-marker', html: markerHtml(), iconSize: [56,56], iconAnchor: [28,52] }) }).addTo(state.map);
+      state.pathLine = L.polyline([], { color: '#38bdf8', weight: 5, lineCap: 'round', lineJoin: 'round' }).addTo(state.map);
+      
+      state.ghostMarker = L.circleMarker(defaultCenter, { radius: 8, color: '#f59e0b', weight: 3, fillColor: '#fbbf24', fillOpacity: 0.5 }).addTo(state.map);
+      state.ghostMarker.setStyle({ opacity: 0, fillOpacity: 0 });
+
+      initChart();
+      setTimeout(() => state.map.invalidateSize(), 500); 
+    }
+
+    function initChart(){
+      const ctx = $('speedChart').getContext('2d');
+      Chart.defaults.color = 'rgba(148,163,184, 0.8)';
+      state.chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Speed', data: [], borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,.15)', tension: 0.4, borderWidth: 2, pointRadius: 0, fill: true }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: false } },
+          scales: { x: { display: false }, y: { grid: { color: 'rgba(148,163,184,.1)' } } },
+          onHover: (evt, elements) => {
+            if (!elements || !elements.length || !state.currentTripPoints.length) return;
+            const pt = state.currentTripPoints[elements[0].index];
+            if (pt) {
+              state.ghostMarker.setLatLng([pt.lat, pt.lng]).setStyle({ opacity: 1, fillOpacity: 0.5 });
+              setTimeout(() => state.ghostMarker.setStyle({ opacity: 0, fillOpacity: 0 }), 1500);
+            }
+          }
+        }
+      });
+    }
+
+    function addSpeedSample(speedKmh, label){
+      state.speedLabels.push(label); state.speedSamples.push(speedKmh);
+      if (state.speedLabels.length > 40){ state.speedLabels.shift(); state.speedSamples.shift(); }
+      state.chart.update('none');
+    }
+
+    function applyMapStyle(){
+      if (!state.map) return;
+      if (state.mapStyle === 'satellite'){
+        if (state.map.hasLayer(state.vectorLayer)) state.map.removeLayer(state.vectorLayer);
+        if (!state.map.hasLayer(state.satelliteLayer)) state.satelliteLayer.addTo(state.map);
+        state.pathLine.setStyle({ color: '#22c55e' });
+      } else {
+        if (state.map.hasLayer(state.satelliteLayer)) state.map.removeLayer(state.satelliteLayer);
+        if (!state.map.hasLayer(state.vectorLayer)) state.vectorLayer.addTo(state.map);
+        state.pathLine.setStyle({ color: '#38bdf8' });
+      }
+    }
+
+    function updateCompass(){
+      $('needle').style.transform = `rotate(${state.currentHeading}deg)`;
+      $('headingText').textContent = `${Math.round(state.currentHeading)}°`;
+      if(state.marker) {
+        const el = state.marker.getElement();
+        if(el) { const wrap = el.querySelector('.marker-wrap'); if(wrap) wrap.style.transform = `rotate(${state.currentHeading}deg)`; }
+      }
+    }
+
+    // =========================
+    // Tracking Engine
+    // =========================
+    function startTracking(manual = true){
+      if (!navigator.geolocation) return toast('Geolocation not supported!');
+      if (state.tracking) return;
+
+      state.tracking = true;
+      state.startTime = state.startTime || Date.now();
+      state.lapStartTime = state.lapStartTime || Date.now();
+      state.lastGeoAt = 0; state.lastPosition = null;
+      if(manual) state.currentTripPoints = []; 
+      
+      const btn = $('trackBtn');
+      btn.innerHTML = '⏸ Pause'; btn.className = 'btn danger';
+      $('modeText').textContent = 'Tracking Active';
+      setStatus('Tracking active', 'live');
+      
+      if(manual) speak('GPS Navigation started');
+
+      const opts = { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 };
+      if (state.watchId) navigator.geolocation.clearWatch(state.watchId);
+      state.watchId = navigator.geolocation.watchPosition(onGeo, err => toast('GPS Error! Check permissions.'), opts);
+      
+      toast(manual ? 'Tracking Started' : 'Auto Tracking Engaged');
+      enableSensors();
+    }
+
+    function stopTracking(){
+      if (state.watchId) { navigator.geolocation.clearWatch(state.watchId); state.watchId = null; }
+      state.tracking = false;
+      const btn = $('trackBtn'); btn.innerHTML = '▶ Start'; btn.className = 'btn primary';
+      $('modeText').textContent = 'Paused';
+      setStatus('Tracking paused', 'warn');
+      $('limitBanner').classList.remove('show'); document.body.classList.remove('flash'); state.overSpeedActive = false;
+      speak('Tracking paused'); finalizeTrip(false); toast('Tracking Paused');
+    }
+
+    function finalizeTrip(autoSave = false){
+      if (!state.currentTripPoints.length) return;
+      const end = Date.now(), dur = end - (state.startTime || end);
+      const avg = state.totalDistanceKm / Math.max(1e-6, dur / 3600000);
+      const trip = {
+        id: generateId(), name: state.tripName || `Trip ${formatDateTime(end)}`,
+        startTime: state.startTime || end, endTime: end, durationMs: dur,
+        distanceKm: Number(state.totalDistanceKm.toFixed(3)), avgSpeed: Number(avg.toFixed(1)),
+        maxSpeed: Number(state.maxSpeed.toFixed(1)), calories: Math.round(state.totalCalories),
+        steps: Math.round(state.steps), points: [...state.currentTripPoints]
+      };
+      state.trips.unshift(trip); state.trips = state.trips.slice(0, 50);
+      saveTrips(); renderHistory();
+      if (autoSave) toast(`Saved: ${escapeHTML(trip.name)}`); // XSS Fix applied
+    }
+
+    function onGeo(pos){
+      const now = Date.now();
+      if (state.batterySaver && state.batteryLevel <= 0.2 && now - state.lastGeoAt < 5000) return;
+
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      let speedKmh = pos.coords.speed ? pos.coords.speed * 3.6 : 0;
+      
+      if(!speedKmh && state.lastPosition && state.lastGeoAt){
+        const dt = (now - state.lastGeoAt) / 1000;
+        if(dt > 0) speedKmh = (haversineKm([state.lastPosition.coords.latitude, state.lastPosition.coords.longitude], [lat, lng]) / (dt/3600));
+      }
+
+      state.currentLocation = [lat, lng];
+      if (pos.coords.heading !== null && speedKmh > 1) { state.currentHeading = pos.coords.heading; updateCompass(); }
+
+      if (state.lastPosition){
+        const movedMeters = haversineKm([state.lastPosition.coords.latitude, state.lastPosition.coords.longitude], [lat, lng]) * 1000;
+        if (movedMeters >= 2){
+          state.totalDistanceKm += (movedMeters/1000);
+          if(!state.motionEnabled) state.steps += (movedMeters / 0.78);
+          
+          // Calories
+          const w = state.weightKg || 65, dtH = (now - state.lastGeoAt)/3600000;
+          let met = speedKmh >= 10 ? 9.8 : (speedKmh >= 6 ? 6.0 : (speedKmh >= 3 ? 3.8 : 2.3));
+          state.totalCalories += (met * w * dtH);
+          
+          // Lap
+          const lapIdx = Math.floor(state.totalDistanceKm);
+          if (lapIdx > state.lastLapIndex && state.totalDistanceKm > 0){
+             state.lastLapIndex = lapIdx; speak(`Lap ${lapIdx} complete.`); vibrate([100,50,100]);
+          }
+        }
+      }
+
+      if (speedKmh > state.maxSpeed) state.maxSpeed = speedKmh;
+      state.currentTripPoints.push({ lat, lng, speed: speedKmh, time: now, alt: pos.coords.altitude || 0 });
+      
+      addSpeedSample(speedKmh, new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+      state.pathLine.addLatLng([lat, lng]); state.marker.setLatLng([lat, lng]);
+      
+      if (state.headingUp) state.map.setView([lat, lng], 16, { animate: true });
+      else state.map.panTo([lat, lng], { animate: true });
+
+      // Over speed logic
+      if (state.speedLimit > 0) {
+        const over = speedKmh > state.speedLimit;
+        $('limitBanner').classList.toggle('show', over);
+        if (over && !state.overSpeedActive){
+          state.overSpeedActive = true; document.body.classList.add('flash'); speak(`Over speeding`); vibrate([200, 100, 200]);
+        } else if (!over) { state.overSpeedActive = false; document.body.classList.remove('flash'); }
+      }
+
+      updateStatsUI(pos, speedKmh);
+      state.lastPosition = pos; state.lastGeoAt = now;
+      
+      if (!state.tracking && state.autoDetect) startTracking(false);
+    }
+
+    function updateStatsUI(pos, speedKmh){
+      $('speedBig').textContent = `${speedKmh.toFixed(1)} km/h`;
+      $('distanceVal').textContent = `${state.totalDistanceKm.toFixed(2)} km`;
+      $('caloriesVal').textContent = `${Math.round(state.totalCalories)} kcal`;
+      $('stepsVal').textContent = `${Math.round(state.steps).toLocaleString()}`;
+      $('altitudeVal').textContent = pos.coords.altitude ? `${pos.coords.altitude.toFixed(0)} m` : '-- m';
+      
+      const pct = clamp((state.totalDistanceKm / Math.max(0.1, state.goalKm)) * 100, 0, 100);
+      $('progressFill').style.width = `${pct}%`;
+      $('goalPercent').textContent = `${Math.round(pct)}%`;
+      if(pct >= 100 && state.totalDistanceKm > 0) confetti({ particleCount: 50, origin: { y: 0.6 } });
+    }
+
+    setInterval(() => {
+      if (!state.tracking || !state.startTime) return;
+      const elapsed = Date.now() - state.startTime;
+      $('durationVal').textContent = formatTime(elapsed);
+      if(elapsed > 0) $('avgSpeedVal').textContent = `${(state.totalDistanceKm / (elapsed / 3600000)).toFixed(1)} km/h`;
+    }, 1000);
+
+    // =========================
+    // Hardware Sensors
+    // =========================
+    async function enableSensors(){
+      if (navigator.getBattery) navigator.getBattery().then(b => {
+        const upd = () => { state.batteryLevel = b.level; $('batteryBadge').textContent = `🔋 ${Math.round(b.level * 100)}%`; };
+        b.addEventListener('levelchange', upd); upd();
+      });
+
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+        try { if(await DeviceOrientationEvent.requestPermission() === 'granted') window.addEventListener('deviceorientation', handleOrient, true); } catch(e){}
+      } else window.addEventListener('deviceorientationabsolute', handleOrient, true);
+    }
+
+    function handleOrient(e){
+      let h = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : (e.alpha ? 360 - e.alpha : null);
+      if(h !== null && !state.tracking) { state.currentHeading = h; updateCompass(); } 
+    }
+
+    // =========================
+    // History & Actions
+    // =========================
+    function renderHistory(){
+      const list = $('historyList'); const q = ($('historyFilterInput').value || '').toLowerCase();
+      const filtered = state.trips.filter(t => !q || (t.name || '').toLowerCase().includes(q));
+      list.innerHTML = '';
+      
+      if (!filtered.length) return list.innerHTML = `<div class="card trip"><div class="trip-title">No saved trips yet</div></div>`;
+
+      filtered.forEach(t => {
+        const d = document.createElement('div'); d.className = 'card trip';
+        // XSS vulnerability fixed below by escaping t.name
+        d.innerHTML = `
+          <div class="trip-top">
+            <div><div class="trip-title">${escapeHTML(t.name)}</div><div class="trip-meta">${formatDateTime(t.startTime)}</div></div>
+            <div class="chip">${t.distanceKm.toFixed(2)} km</div>
+          </div>
+          <div class="trip-stats">
+            <div>Time: <strong>${formatTime(t.durationMs)}</strong></div>
+            <div>Avg: <strong>${t.avgSpeed.toFixed(1)} km/h</strong></div>
+            <div>Max: <strong>${t.maxSpeed.toFixed(1)} km/h</strong></div>
+            <div>Cals: <strong>${t.calories} kcal</strong></div>
+          </div>
+          <div class="trip-actions">
+            <button class="btn soft" onclick="viewTrip('${t.id}')">View Map</button>
+            <button class="btn soft" style="color:var(--danger)" onclick="deleteTrip('${t.id}')">Delete</button>
+          </div>
+        `;
+        list.appendChild(d);
+      });
+    }
+
+    window.viewTrip = (id) => {
+      const trip = state.trips.find(t => t.id === id);
+      if (!trip || !trip.points.length) return;
+      const ll = trip.points.map(p => [p.lat, p.lng]);
+      state.pathLine.setLatLngs(ll); state.marker.setLatLng(ll[ll.length-1]);
+      state.map.fitBounds(L.latLngBounds(ll), { padding:[30,30] });
+      setTab('driveTab'); toast(`Viewing ${escapeHTML(trip.name)}`); // XSS Fix
+    };
+
+    window.deleteTrip = (id) => {
+      if(!confirm('Delete this trip?')) return;
+      state.trips = state.trips.filter(t => t.id !== id); saveTrips(); renderHistory();
+    };
+
+    $('saveCurrentBtn').onclick = $('saveTripBtn').onclick = () => {
+      if (!state.currentTripPoints.length) return toast('No active data to save');
+      state.tripName = $('tripNameInput').value.trim(); finalizeTrip(true); $('tripNameInput').value = '';
+    };
+
+    // =========================
+    // Initialization & Bindings
+    // =========================
+    function bindEvents(){
+      $('themeBtn').onclick = () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; saveSettings(); applyTheme(); };
+      $('settingsBtn').onclick = () => openSettings(true);
+      $('closeSettingsBtn').onclick = $('overlay').onclick = () => openSettings(false);
+      
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => setTab(btn.dataset.tab));
+      $('trackBtn').onclick = () => state.tracking ? stopTracking() : startTracking(true);
+      $('recenterBtn').onclick = () => state.currentLocation && state.map.setView(state.currentLocation, 16);
+      
+      // Fullscreen functionality
+      $('fullscreenBtn').onclick = () => {
+        const wrap = $('mapWrapper');
+        wrap.classList.toggle('is-fullscreen');
+        setTimeout(() => state.map.invalidateSize(), 300);
+      };
+
+      $('headingBtn').onclick = () => { state.headingUp = !state.headingUp; toast(`Heading Up: ${state.headingUp?'ON':'OFF'}`); };
+      
+      $('searchBtn').onclick = async () => {
+        const q = $('searchInput').value.trim(); if(!q) return;
+        try{
+          const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}`);
+          const d = await r.json();
+          if(d.length) state.map.setView([parseFloat(d[0].lat), parseFloat(d[0].lon)], 15);
+          else toast('Not found');
+        }catch(e){ toast('Search failed'); }
+      };
+
+      $('sosBtn').onclick = () => {
+        vibrate([300, 100, 300]); speak('Emergency SOS triggered');
+        // Syntax bug fix - using valid Google Maps formatting and correct interpolation
+        const loc = `https://www.google.com/maps?q=${state.currentLocation[0]},${state.currentLocation[1]}`;
+        const msg = encodeURIComponent(`EMERGENCY!\nLocation: ${loc}\nTime: ${new Date().toLocaleString()}`);
+        if(confirm('Send SOS alert?')) window.location.href = state.sos.includes('@') ? `mailto:${state.sos}?subject=EMERGENCY&body=${msg}` : `sms:${state.sos || '119'}?body=${msg}`;
+      };
+
+      const updateSet = (key, type, val) => { state[key] = type==='num' ? parseFloat(val) : val; saveSettings(); updateUIBase(); };
+      $('weightInput').onchange = (e) => updateSet('weightKg', 'num', e.target.value);
+      $('speedLimitInput').onchange = (e) => updateSet('speedLimit', 'num', e.target.value);
+      $('goalInput').onchange = (e) => updateSet('goalKm', 'num', e.target.value);
+      $('avatarModeSelect').onchange = (e) => updateSet('avatarMode', 'str', e.target.value);
+      $('sosInput').onchange = (e) => updateSet('sos', 'str', e.target.value);
+      
+      $('avatarUrlInput').onchange = (e) => updateSet('avatarUrl', 'str', e.target.value);
+      $('avatarFileInput').onchange = (e) => {
+        const f = e.target.files[0]; if(!f) return;
+        const r = new FileReader(); r.onload = () => { updateSet('avatarUrl', 'str', r.result); toast('Avatar updated'); };
+        r.readAsDataURL(f);
+      };
+
+      const bindToggle = (id, key) => {
+        $(id).onclick = () => { state[key] = !state[key]; saveSettings(); updateUIBase(); toast(`${key} updated`); };
+      };
+      bindToggle('cloudToggle', 'cloudSync'); bindToggle('autoDetectToggle', 'autoDetect');
+      bindToggle('batterySaverToggle', 'batterySaver'); bindToggle('voiceToggle', 'voiceOn');
+      bindToggle('vibrateToggle', 'vibrateOn');
+
+      $('vectorBtn').onclick = () => { state.mapStyle = 'vector'; saveSettings(); applyMapStyle(); updateUIBase(); };
+      $('satBtn').onclick = () => { state.mapStyle = 'satellite'; saveSettings(); applyMapStyle(); updateUIBase(); };
+
+      $('clearBtn').onclick = () => {
+        if(!confirm('Erase ALL data?')) return;
+        localStorage.clear(); location.reload();
+      };
+
+      $('refreshHistoryBtn').onclick = renderHistory;
+      $('historyFilterInput').oninput = renderHistory;
+    }
+
+    window.onload = () => {
+      loadTrips(); initMap(); bindEvents();
+      applyTheme(); applyMapStyle(); updateUIBase(); renderHistory(); setTab('driveTab');
+      enableSensors();
+    };
+  </script>
+</body>
+</html>
